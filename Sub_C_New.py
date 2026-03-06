@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Integrand import conduction_ratio_uv
 from Integrator import Integrator
+import sys
 
 #from Sub_B import TDTR_Bidirectional_SUB_B
 
@@ -27,35 +28,58 @@ def TDTR_Bidirectional_SUB_C(X, Ratio_data, tdelay, tau_rep, f,
     layer_props[0,0] = 133e-9
     layer_props[1,0] = 1e-3
 
-    layer_props[0,4] = 129
-    layer_props[1,4] = 710
+    layer_props[0,4] = 2.492e6 #129 * (19.32 * 1000)
+    layer_props[1,4] = 1.62e6 #710 * (2.33 * 1000)
 
     layer_props[0,5] = 19.32
     layer_props[1,5] = 2.33
 
-    for i in range(3):
-        layer_props[1,i] = X[1]
-        layer_props[0,i] = X[0]
 
-    #layer_props = np.array([[133e-9, 310, 310, 310, 129, 19.32],
-    #                  [1e-3, 149, 149, 149 ,710 , 2.33]],dtype = float)
+
+    G = X[0]/h[1]
+    interface_props = np.array([G])
+
+    for i in range(1,4):
+        layer_props[1,i] = X[1]
+        layer_props[0,i] = 315 #X[0]
+
     
 
     pump_props = np.array([r_pump,r_pump])
     probe_props = np.array([r_probe, r_probe])
 
     # Call model function (you must define this elsewhere)
-    Ts,_ = Integrator(layer_props.shape[0],nnodes, layer_props, [0.3], pump_props, probe_props, f, tau_rep, tdelay)
+    Tin_model, Tout_model = Integrator(layer_props.shape[0],nnodes, layer_props, interface_props, pump_props, probe_props, f, tau_rep, tdelay)
 
     #print(Ratio_data.shape())
 
     # Absorption-weighted temperature response
-    print(Ts.shape)
-    print(AbsProf.shape)
-    Tin_model = np.real(Ts) # @ AbsProf / (np.ones(AbsProf.shape).T @ AbsProf)
-    Tout_model = np.imag(Ts) # @ AbsProf / (np.ones(AbsProf.shape).T @ AbsProf)
+    
+    
+    #Tin_model = np.real(Ts) # @ AbsProf / (np.ones(AbsProf.shape).T @ AbsProf)
+    #Tout_model = np.imag(Ts) # @ AbsProf / (np.ones(AbsProf.shape).T @ AbsProf)
     Ratio_model = -Tin_model / Tout_model
 
+    '''
+    correct_arr = np.load("correct_ratio_model.npy")
+    count = True
+
+    diff = np.abs(Ratio_model - correct_arr)
+
+    print("model shape: ",Ratio_model.shape)
+    print("correct shape", correct_arr.shape)
+    print("diff: min/mean/max =", diff.min(), diff.mean(), diff.max())
+    print("model: min/mean/max =", Ratio_model.min(), Ratio_model.mean(), Ratio_model.max())
+    print("correct: min/mean/max =", correct_arr.min(), correct_arr.mean(), correct_arr.max())
+
+    print("mean(model-correct) =", np.mean(Ratio_model - correct_arr))
+    print("std(model-correct)  =", np.std(Ratio_model - correct_arr))
+
+    rel = diff / (np.maximum(np.abs(correct_arr), 1e-12))
+    print("rel err: min/mean/max =", rel.min(), rel.mean(), rel.max())
+
+    sys.exit()
+    '''
 
     # Residuals and error metric
     res = ((Ratio_model - Ratio_data) / Ratio_model)**2
@@ -82,7 +106,7 @@ def TDTR_Bidirectional_SUB_C(X, Ratio_data, tdelay, tau_rep, f,
     plt.figure(10)
     plt.clf()
 
-    model_matrix = -np.real(Ts) / np.imag(Ts)  # shape: (len(tdelay), k)
+    model_matrix = Ratio_model #-np.real(Ts) / np.imag(Ts)  # shape: (len(tdelay), k)
 
     # Draw all green lines but label only the first one
     lines = plt.semilogx(tdelay, model_matrix, 'g', linewidth=0.8)

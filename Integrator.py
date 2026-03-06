@@ -5,6 +5,10 @@ import numpy as np
 
 
 def Integrator(N_layers,nnodes, layer_props, interface_props, pump_props, probe_props, freq,tau_rep, tdelay):
+
+    #print(tdelay)
+    #tdelay = tdelay * 1e-12
+
     dRdT = 1
     w0 = 2*np.pi*freq
     ws = 2*np.pi/tau_rep
@@ -22,7 +26,7 @@ def Integrator(N_layers,nnodes, layer_props, interface_props, pump_props, probe_
     w_y = np.sqrt(wysq)
 
     j = 1j
-    N = 100
+    N = 10000
 
     s_nnodes,s_weights = hermgauss(nnodes)
     r_nnodes,r_weights = hermgauss(nnodes)
@@ -30,24 +34,37 @@ def Integrator(N_layers,nnodes, layer_props, interface_props, pump_props, probe_
     X,Y = np.meshgrid(s_nnodes,r_nnodes, indexing = 'ij')
     WX,WY = np.meshgrid(s_weights,r_weights, indexing ='ij')
     jac = 1/((np.pi**2)*w_x*w_y)
-    sum_n = 0+0j
+    vin_sum = 0+0j
+    vout_sum = 0+0j
 
     U = X/(np.pi*w_x)
     V = Y/(np.pi*w_y)
 
+    
 
     for i in range(-N, N+1):
         n = i
-        freq = w0+n*ws
-        H_uv = conduction_ratio_uv(U,V, N_layers, layer_props, interface_props, freq, use_omega = True)
-        integral = np.sum(WX*WY*H_uv)
-        sum_n += jac*integral*np.exp(j*n*ws*tdelay)
+        #wn = w0+n*ws
+        omega_plus = w0+n*ws
+        omega_minus = -w0+n*ws
+        H_uv_plus = conduction_ratio_uv(U,V, N_layers, layer_props, interface_props, omega_plus, use_omega = False)
+        H_uv_minus = conduction_ratio_uv(U,V, N_layers, layer_props, interface_props, omega_minus, use_omega = False)
+        integral_plus = np.sum(WX*WY*H_uv_plus)
+        integral_minus = np.sum(WX*WY*H_uv_minus)
+        delta_t_minus = jac*integral_minus
+        delta_t_plus = jac*integral_plus
+        vin_sum += (delta_t_plus+delta_t_minus)*np.exp(j*n*ws*tdelay)
+        vout_sum += (delta_t_plus-delta_t_minus)*np.exp(j*n*ws*tdelay)
 
-    delta_R = (dRdT)*sum_n
+    V_in = 0.5*(dRdT)*vin_sum
+    V_out = -0.5*j*(dRdT)*vout_sum
 
-    V_in = delta_R.real
-    V_out = delta_R.imag
+    Vin_real = np.real(V_in)
+    Vout_real = np.real(V_out)
 
-    Ratio = -V_in/V_out
+    Ratio = -Vin_real/Vout_real
 
-    return delta_R, Ratio
+    return Vin_real, Vout_real
+
+
+

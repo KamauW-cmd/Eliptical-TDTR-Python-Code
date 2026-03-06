@@ -15,10 +15,9 @@ from Sub_C_New import TDTR_Bidirectional_SUB_C
 #from Sub_B import TDTR_Bidirectional_SUB_B
 from Integrator import Integrator
 from extract_interior_V4 import extract_interior_V4  # you must define this helper
-
 # ---- USER INPUT ----
 SysParam = parameter_example()
-datafile = Data_Processor(r'C:\Users\kamau\OneDrive\Documents\Research 2025\Python Code\Data\TDTR20x7-23-2025-AuonSiSandia_2')
+datafile = Data_Processor(r'C:\Users\kamau\OneDrive\Documents\Research 2025\Eliptical TDTR Python Code\Data\TDTR20x7-23-2025-AuonSiSandia_2')
 tnorm = 200  # (ps)
 auto_on = True
 save_results = False
@@ -26,7 +25,6 @@ addfilename = ''
 Col = 'k'
 ClearFig = True
 psc = False
-frac = 0.19
 tmax = 3.6e-9
 nnodes = 35
 
@@ -113,7 +111,9 @@ if auto_on:
     layer_props[0,5] = 19.32
     layer_props[1,5] = 2.33
 
-    for i in range(3):
+    print(layer_props)
+
+    for i in range(1,4):
         layer_props[1,i] = Xsol[1]
         layer_props[0,i] = Xsol[0]
 
@@ -142,10 +142,10 @@ for i, idx in enumerate(FITNh):
     h[idx] = Xsol[len(FITNLambda) + len(FITNC) + i]
 
 # ---- FINAL MODEL ----
-Ts,_ = Integrator(len(FITNLambda),nnodes, layer_props, Lamda , pump_props, probe_props, f,tau_rep, tdelay_model)
+Tin_model, Tout_model = Integrator(len(FITNLambda),nnodes, layer_props, Lamda , pump_props, probe_props, f,tau_rep, tdelay_model)
 
-Tin_model = Ts.real
-Tout_model = Ts.imag
+#Tin_model = Ts.real
+#Tout_model = Ts.imag
 
 #Tin_model = (np.real(Ts) @ AbsProf) / (np.ones(AbsProf.shape).T @ AbsProf)
 #Tout_model = (np.imag(Ts) @ AbsProf) / (np.ones(AbsProf.shape).T @ AbsProf)
