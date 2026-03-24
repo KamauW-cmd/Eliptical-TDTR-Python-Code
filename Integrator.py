@@ -40,7 +40,7 @@ def Integrator(N_layers,nnodes, layer_props, interface_props, pump_props, probe_
     U = X/(np.pi*w_x)
     V = Y/(np.pi*w_y)
 
-    
+    Tm = 0+0j
 
     for i in range(-N, N+1):
         n = i
@@ -53,16 +53,20 @@ def Integrator(N_layers,nnodes, layer_props, interface_props, pump_props, probe_
         integral_minus = np.sum(WX*WY*H_uv_minus)
         delta_t_minus = jac*integral_minus
         delta_t_plus = jac*integral_plus
-        vin_sum += (delta_t_plus+delta_t_minus)*np.exp(j*n*ws*tdelay)
-        vout_sum += (delta_t_plus-delta_t_minus)*np.exp(j*n*ws*tdelay)
+        vin_sum = (delta_t_plus+delta_t_minus)
+        vout_sum = (delta_t_plus-delta_t_minus)
+        carrier = np.exp(j*n*ws*tdelay)
+        Tm_temp  = (vin_sum + vout_sum)
+        Tm += 0.5*(dRdT)*Tm_temp * carrier
 
-    V_in = 0.5*(dRdT)*vin_sum
-    V_out = -0.5*j*(dRdT)*vout_sum
+    #V_in = 0.5*(dRdT)*vin_sum
+    #V_out = -0.5*j*(dRdT)*vout_sum
 
-    Vin_real = np.real(V_in)
-    Vout_real = np.real(V_out)
+    Vin_real = np.real(Tm)
+    #Vout_real = np.imag(V_out)
+    Vout_real = np.imag(Tm)
 
-    Ratio = -Vin_real/Vout_real
+    #Ratio = -Vin_real/Vout_real
 
     return Vin_real, Vout_real
 

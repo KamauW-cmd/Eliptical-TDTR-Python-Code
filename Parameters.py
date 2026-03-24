@@ -2,7 +2,7 @@ import numpy as  np
 
 def parameter_example():
     SysParam = {}
-    SysParam['Lambda'] = np.array([315 , 0.3 , 145]) # Thermal conductivities (W m^-1 K^-1)
+    SysParam['Lambda'] = np.array([215 , 0.3 , 145]) # Thermal conductivities (W m^-1 K^-1)
     SysParam['C'] = np.array([2.492, 0.1, 1.62])*1e6 # Volumetric heat capacities (J m^-3 K^-1)
     SysParam['h'] = np.array([133, 1, 1e6])*1e-9; # Thicknesses (m)   
     SysParam['eta'] = np.ones(SysParam['Lambda'].size) #Anisotropy parameter eta=kx/ky;
