@@ -102,11 +102,11 @@ if auto_on:
     Xsol = result.x
     layer_props = np.zeros((2,6))
 
-    layer_props[0,0] = 133e-9
-    layer_props[1,0] = 1e-3
+    layer_props[0,0] = h[0]
+    layer_props[1,0] = h[1]
 
-    layer_props[0,4] = 129
-    layer_props[1,4] = 710
+    layer_props[0,4] = C[0]
+    layer_props[1,4] = C[1]
 
     layer_props[0,5] = 19.32
     layer_props[1,5] = 2.33
@@ -141,23 +141,26 @@ for i, idx in enumerate(FITNC):
 for i, idx in enumerate(FITNh):
     h[idx] = Xsol[len(FITNLambda) + len(FITNC) + i]
 
+'''
 # ---- FINAL MODEL ----
-Tin_model, Tout_model = Integrator(len(FITNLambda),nnodes, layer_props, Lamda , pump_props, probe_props, f,tau_rep, tdelay_model)
+G = Xsol[0]/h[1]
+interface_props = np.array([G])
+T_final,Ratio_model = Integrator(tdelay_model, tau_rep, f, Lamda, C, h, eta,r_pump, r_probe, P_pump, nnodes, X_heat, X_temp, pump_props, probe_props, layer_props, interface_props)
 
-#Tin_model = Ts.real
-#Tout_model = Ts.imag
+Tin_model = np.real(T_final)
+Tout_model = np.imag(T_final)
 
 #Tin_model = (np.real(Ts) @ AbsProf) / (np.ones(AbsProf.shape).T @ AbsProf)
 #Tout_model = (np.imag(Ts) @ AbsProf) / (np.ones(AbsProf.shape).T @ AbsProf)
-Ratio_model = -Tin_model / Tout_model
+#Ratio_model = -Tin_model / Tout_model
 
 # ---- SAVE RESULTS ----
-if save_results:
-    from scipy.io import savemat
-    savemat(f"{datafile[:-4]}_FIT{addfilename}.mat", {
-        "Lambda": Lamda, "C": C, "h": h, "Ratio_model": Ratio_model,
-        "Tin_model": Tin_model, "Tout_model": Tout_model
-    })
+#if save_results:
+#    from scipy.io import savemat
+#    savemat(f"{datafile[:-4]}_FIT{addfilename}.mat", {
+#        "Lambda": Lamda, "C": C, "h": h, "Ratio_model": Ratio_model,
+#       "Tin_model": Tin_model, "Tout_model": Tout_model
+#    })
 
 # ---- PLOT RESULTS ----
 plt.figure(figsize=(12, 5))
@@ -193,6 +196,68 @@ plt.grid(True)
 plt.xlim([1, 5000])
 plt.ylim([0.1, 10 * np.ceil(np.log10(np.max(Tin_model)))])
 plt.title("Temperature Fit")
+
+plt.tight_layout()
+plt.show()
+'''
+
+# ---- FINAL MODEL ----
+
+# 1. Rebuild layer_props correctly from the newly fitted Lamda and C arrays!
+layer_props = np.zeros((2, 6))
+layer_props[0, 0] = h[0]
+layer_props[1, 0] = h[1]
+
+layer_props[0, 1:4] = Lamda[0]  # kzz, kxx, kyy for layer 1 (Au)
+layer_props[1, 1:4] = Lamda[1]  # kzz, kxx, kyy for layer 2 (Si)
+
+layer_props[0, 4] = C[0]        # Cv for layer 1
+layer_props[1, 4] = C[1]        # Cv for layer 2
+
+# 2. Provide a physically realistic interface conductance (Typical Au/Si is ~1e8 W/m^2K)
+G = 1e8 
+interface_props = np.array([G])
+
+T_final, Ratio_model = Integrator(tdelay_model, tau_rep, f, Lamda, C, h, eta, r_pump, r_probe, P_pump, nnodes, X_heat, X_temp, pump_props, probe_props, layer_props, interface_props)
+
+Tin_model = np.real(T_final)
+Tout_model = np.imag(T_final)
+
+# ---- PLOT RESULTS ----
+plt.figure(figsize=(12, 5))
+
+# Plot Ratio
+plt.subplot(1, 2, 1)
+plt.loglog(tdelay_raw * 1e12, Ratio_raw, 'ro', markersize=4)
+plt.loglog(tdelay_model * 1e12, Ratio_model, Col, linewidth=2)
+plt.xlabel('Time delay (ps)')
+plt.ylabel('-Vin/Vout')
+plt.grid(True)
+plt.xlim([1, 5000])
+plt.ylim([0.1, 10 * np.ceil(np.log10(np.max(Ratio_model)))])
+plt.title("TDTR Ratio Fit")
+
+# Plot Tin/Tout
+plt.subplot(1, 2, 2)
+Vin_norm = np.interp(tnorm, tdelay_raw * 1e12, Vin_raw)
+Tin_model_norm = np.interp(tnorm, tdelay_model * 1e12, Tin_model)
+Tin_data = Vin_raw / Vin_norm * Tin_model_norm
+
+Vout_norm = np.interp(tnorm, tdelay_raw * 1e12, Vout_raw)
+Tout_model_norm = np.interp(tnorm, tdelay_model * 1e12, Tout_model)
+Tout_data = Vout_raw / Vout_norm * Tout_model_norm
+
+plt.loglog(tdelay_model * 1e12, Tin_model, Col, linewidth=2, label="Tin Model")
+plt.loglog(tdelay_model * 1e12, -Tout_model, Col, linewidth=2, linestyle='--', label="-Tout Model")
+plt.loglog(tdelay_raw * 1e12, Tin_data, 'ro', markersize=4)
+plt.loglog(tdelay_raw * 1e12, -Tout_data, 'bo', markersize=4) # Changed Tout data to blue so you can distinguish them!
+plt.xlabel('Time delay (ps)')
+plt.ylabel('ΔT')
+plt.grid(True)
+plt.xlim([1, 5000])
+# 3. Removed the broken ylim calculation so the plot can automatically scale to the data!
+plt.title("Temperature Fit")
+plt.legend()
 
 plt.tight_layout()
 plt.show()

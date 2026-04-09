@@ -49,7 +49,9 @@ def TDTR_Bidirectional_SUB_C(X, Ratio_data, tdelay, tau_rep, f,
     probe_props = np.array([r_probe, r_probe])
 
     # Call model function (you must define this elsewhere)
-    Tin_model, Tout_model = Integrator(layer_props.shape[0],nnodes, layer_props, interface_props, pump_props, probe_props, f, tau_rep, tdelay)
+    #Tin_model, Tout_model = Integrator(layer_props.shape[0],nnodes, layer_props, interface_props, pump_props, probe_props, f, tau_rep, tdelay)
+
+    _,Ratio_model = Integrator(tdelay, tau_rep, f, Lambda, C, h, eta,r_pump, r_probe, P_pump, nnodes, X_heat, X_temp, pump_props, probe_props, layer_props, interface_props)
 
     #print(Ratio_data.shape())
 
@@ -58,7 +60,7 @@ def TDTR_Bidirectional_SUB_C(X, Ratio_data, tdelay, tau_rep, f,
     
     #Tin_model = np.real(Ts) # @ AbsProf / (np.ones(AbsProf.shape).T @ AbsProf)
     #Tout_model = np.imag(Ts) # @ AbsProf / (np.ones(AbsProf.shape).T @ AbsProf)
-    Ratio_model = -Tin_model / Tout_model
+    #Ratio_model = -Tin_model / Tout_model
 
     '''
     correct_arr = np.load("correct_ratio_model.npy")
